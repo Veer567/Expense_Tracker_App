@@ -5,8 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/bar_chart_widget.dart';
 import '../widgets/pie_chart_widget.dart';
 
-enum TimeFilter { week, month, year }
-
 class ChartScreen extends StatefulWidget {
   /// Optional: if provided, ChartScreen will use this list instead of fetching from Firestore.
   /// Each map should contain: 'amount' (num/double), 'category' (String), 'date' (Timestamp or DateTime), optional 'id'
@@ -19,7 +17,6 @@ class ChartScreen extends StatefulWidget {
 }
 
 class _ChartScreenState extends State<ChartScreen> {
-  TimeFilter _selectedFilter = TimeFilter.month;
   List<Map<String, dynamic>> _allExpenses = [];
   bool _loading = true;
 
@@ -75,7 +72,7 @@ class _ChartScreenState extends State<ChartScreen> {
                 'date': data['date'], // Firestore Timestamp
               };
             }).toList();
-            _loading = false; // ✅ This line fixes the endless spinner
+            _loading = false;
           });
         });
   }
@@ -93,31 +90,13 @@ class _ChartScreenState extends State<ChartScreen> {
 
   List<Map<String, dynamic>> _getFilteredExpenses() {
     final now = DateTime.now();
-    Duration range;
-    switch (_selectedFilter) {
-      case TimeFilter.week:
-        range = const Duration(days: 7);
-        break;
-      case TimeFilter.month:
-        range = const Duration(days: 30);
-        break;
-      case TimeFilter.year:
-        range = const Duration(days: 365);
-        break;
-    }
+    // The chart now always shows expenses for the current month.
+    final startDate = DateTime(now.year, now.month, 1);
 
     return _allExpenses.where((exp) {
       final date = _normalizeDate(exp['date']);
-      return date.isAfter(now.subtract(range));
+      return date.isAfter(startDate);
     }).toList();
-  }
-
-  void _onFilterChanged(TimeFilter? filter) {
-    if (filter != null) {
-      setState(() {
-        _selectedFilter = filter;
-      });
-    }
   }
 
   @override
@@ -210,39 +189,13 @@ class _ChartScreenState extends State<ChartScreen> {
             color: Colors.white,
           ),
         ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            DropdownButton<TimeFilter>(
-              dropdownColor: Colors.indigo.shade700,
-              value: _selectedFilter,
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-              underline: const SizedBox(),
-              onChanged: _onFilterChanged,
-              items: const [
-                DropdownMenuItem(
-                  value: TimeFilter.week,
-                  child: Text('Week', style: TextStyle(color: Colors.white)),
-                ),
-                DropdownMenuItem(
-                  value: TimeFilter.month,
-                  child: Text('Month', style: TextStyle(color: Colors.white)),
-                ),
-                DropdownMenuItem(
-                  value: TimeFilter.year,
-                  child: Text('Year', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '\$${totalSpent.toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        Text(
+          '\$${totalSpent.toStringAsFixed(2)}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
